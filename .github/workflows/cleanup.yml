@@ -1,4 +1,4 @@
-name: Cleanup Old Workflow
+name: Cleanup Workflow 
 
 on:
   schedule:
@@ -10,17 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 安装 GitHub CLI
+      - name: 安装 GitHub CLI 和 jq
         run: |
           sudo apt update
           sudo apt install -y gh jq
 
-      - name: 登录 GitHub CLI
+      - name: 使用 PAT_TOKEN 登录 GitHub CLI
         run: echo "${{ secrets.PAT_TOKEN }}" | gh auth login --with-token
 
-      - name: 保留最近 5 次 workflow 运行，删除多余的
+      - name: 清理旧的 workflow runs（保留最近5次）
         run: |
-          echo "获取并清理旧的 workflow runs..."
-          gh run list --limit 100 --status completed --json databaseId,createdAt \
+          echo "获取并删除旧的 workflow runs..."
+          gh run list --repo "${{ github.repository }}" --limit 100 --status completed --json databaseId,createdAt \
             | jq 'sort_by(.createdAt) | reverse | .[5:] | .[].databaseId' \
             | xargs -I % gh api --method DELETE /repos/${{ github.repository }}/actions/runs/% --silent
