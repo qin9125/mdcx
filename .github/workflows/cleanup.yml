@@ -1,0 +1,24 @@
+name: Cleanup Old Workflow Runs (Keep Latest 5)
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # 每周一凌晨3点执行（UTC时间）
+  workflow_dispatch: # 手动触发支持
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 设置 GitHub CLI
+        uses: cli/cli-action@v1
+
+      - name: 登录 GitHub CLI
+        run: echo "${{ secrets.PAT_TOKEN }}" | gh auth login --with-token
+
+      - name: 清理旧 workflow 运行，只保留最近 5 次
+        run: |
+          echo "正在获取 workflow run 列表..."
+          gh run list --limit 100 --status completed --json databaseId,createdAt \
+            | jq 'sort_by(.createdAt) | reverse | .[5:] | .[].databaseId' \
+            | xargs -I % gh api --method DELETE /repos/${{ github.repository }}/actions/runs/% --silent
