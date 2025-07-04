@@ -1,26 +1,18 @@
-name: Cleanup Workflow 
+name: Delete old workflow runs
 
 on:
   schedule:
-    - cron: '0 3 * * 1' # 每周一凌晨3点（UTC时间）
-  workflow_dispatch:
+    - cron: '0 3 * * 1'  # 每周一凌晨3点
+  workflow_dispatch:     # 手动触发测试
 
 jobs:
-  cleanup:
+  del_runs:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 安装 GitHub CLI 和 jq
-        run: |
-          sudo apt update
-          sudo apt install -y gh jq
-
-      - name: 使用 PAT_TOKEN 登录 GitHub CLI
-        run: echo "${{ secrets.PAT_TOKEN }}" | gh auth login --with-token
-
-      - name: 清理旧的 workflow runs（保留最近5次）
-        run: |
-          echo "获取并删除旧的 workflow runs..."
-          gh run list --repo "${{ github.repository }}" --limit 100 --status completed --json databaseId,createdAt \
-            | jq 'sort_by(.createdAt) | reverse | .[5:] | .[].databaseId' \
-            | xargs -I % gh api --method DELETE /repos/${{ github.repository }}/actions/runs/% --silent
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 7
+          keep_minimum_runs: 3
